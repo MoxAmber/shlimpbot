@@ -12,7 +12,8 @@ config = Config(os.getenv('SHLIMPBOT_SETTINGS', './settings.json'))
 
 
 def run():
-    bot.load_extension('shlimpbot.utilities')
+    for extension in config.get_global('extensions'):
+        bot.load_extension(extension)
     bot.run(config.get_global('discord.token'))
 
 
