@@ -38,6 +38,8 @@ class Wordle(commands.Cog):
     @commands.guild_only()
     @is_config_channel('wordle.channel')
     async def guess(self, ctx, *, guess: str):
+        if not self.current_word:
+            await ctx.send('Game not running. Use command `wordle start` to begin')
         with pkg_resources.resource_stream(__name__, 'data/words.json') as guess_file:
             valid_guesses = json.load(guess_file)
         if guess not in valid_guesses[str(len(self.current_word))]:
