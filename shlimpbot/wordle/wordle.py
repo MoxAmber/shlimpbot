@@ -1,13 +1,21 @@
 import json
 import random
-from typing import Optional
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Optional, Dict, Union
 
 import pkg_resources
-from nextcord import TextChannel
+from nextcord import TextChannel, Thread
 from nextcord.ext import commands
 
 from shlimpbot.bot import config
 from shlimpbot.checks import is_config_channel
+
+
+@dataclass
+class ChannelState:
+    word: Optional[str] = None
+    guesses: int = 0
 
 
 class Wordle(commands.Cog):
@@ -15,70 +23,82 @@ class Wordle(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.current_word: Optional[str] = None
-        self.guesses = 0
+        self.state: Dict[int, ChannelState] = defaultdict(ChannelState)
 
     @commands.group()
     async def wordle(self, ctx):
         pass
 
-    @wordle.command(name='start')
-    @commands.guild_only()
+    @wordle.command(name='cheat')
     @is_config_channel('wordle.channel')
-    async def start(self, ctx):
-        if not self.current_word:
-            with pkg_resources.resource_stream(__name__, 'data/answers.json') as answer_file:
-                answers = json.load(answer_file)
-            self.current_word = random.choice(answers['5'])
-            await ctx.send('⬛' * len(self.current_word))
-        else:
+    async def get_word(self, ctx):
+        current_state = self.state[ctx.channel.id]
+        await ctx.send(current_state.word or "No game in progress")
+
+    @wordle.command(name='start')
+    @is_config_channel('wordle.channel')
+    async def start(self, ctx, *, length: int = 5):
+        current_state = self.state[ctx.channel.id]
+        if current_state.word:
             await ctx.send('Game already running!')
+            return
+
+        with pkg_resources.resource_stream(__name__, 'data/answers.json') as answer_file:
+            answers = json.load(answer_file)
+
+        if length > 7 or length < 4:
+            await ctx.send('Sorry I only know words between 4 and 7 letters long')
+            return
+        current_state.word = random.choice(answers[str(length)])
+        await ctx.send('⬛' * len(current_state.word))
 
     @wordle.command('guess')
-    @commands.guild_only()
     @is_config_channel('wordle.channel')
     async def guess(self, ctx, *, guess: str):
-        if not self.current_word:
+        current_state = self.state[ctx.channel.id]
+        if not current_state.word:
             await ctx.send('Game not running. Use command `wordle start` to begin')
+            return
+
         with pkg_resources.resource_stream(__name__, 'data/words.json') as guess_file:
             valid_guesses = json.load(guess_file)
-        if guess not in valid_guesses[str(len(self.current_word))]:
+
+        if guess not in valid_guesses[str(len(current_state.word))]:
             await ctx.reply('Invalid guess')
             return
 
-        self.guesses += 1
-        response = ['⬛'] * len(self.current_word)
+        current_state.guesses += 1
+        response = ['⬛'] * len(current_state.word)
 
-        letter_counts = {letter: self.current_word.count(letter) for letter in self.current_word}
+        letter_counts = {letter: current_state.word.count(letter) for letter in current_state.word}
 
         for idx, letter in enumerate(guess):
-            if self.current_word[idx] == letter:
+            if current_state.word[idx] == letter:
                 response[idx] = '🟩'
                 letter_counts[letter] -= 1
 
         for idx, letter in enumerate(guess):
-            if self.current_word[idx] != letter and letter_counts.get(letter, 0) > 0:
+            if current_state.word[idx] != letter and letter_counts.get(letter, 0) > 0:
                 response[idx] = '🟨'
                 letter_counts[letter] -= 1
 
         response = ''.join(response)
 
-        if self.guesses == 6 and not guess == self.current_word:
-            response += f'\nGame over, the word was {self.current_word}'
+        if current_state.guesses == 6 and not guess == current_state.word:
+            response += f"\nGame over, the word was {current_state.word}"
 
-        if guess == self.current_word:
+        if guess == current_state.word:
             response += '\nCongratulations!'
 
         await ctx.reply(response)
 
-        if self.guesses == 6 or guess == self.current_word:
-            self.current_word = None
-            self.guesses = 0
+        if current_state.guesses == 6 or guess == current_state.word:
+            self.state.pop(ctx.channel.id)
 
     @wordle.command('channel')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_messages=True)
-    async def set_channel(self, ctx, *, channel: TextChannel):
+    async def set_channel(self, ctx, *, channel: Union[TextChannel, Thread]):
         config.set_server(ctx.guild.id, 'wordle.channel', channel.id)
         await ctx.send(f'Wordle channel set to {channel.mention}')
 
