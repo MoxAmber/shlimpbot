@@ -30,39 +30,46 @@ class Wordle(commands.Cog):
             with pkg_resources.resource_stream(__name__, 'data/answers.json') as answer_file:
                 answers = json.load(answer_file)
             self.current_word = random.choice(answers['5'])
-            await ctx.send('⬛⬛⬛⬛⬛')
+            await ctx.send('⬛' * len(self.current_word))
         else:
             await ctx.send('Game already running!')
 
     @wordle.command('guess')
     @commands.guild_only()
     @is_config_channel('wordle.channel')
-    async def guess(self, ctx, *, arg: str):
+    async def guess(self, ctx, *, guess: str):
         with pkg_resources.resource_stream(__name__, 'data/words.json') as guess_file:
             valid_guesses = json.load(guess_file)
-        if arg not in valid_guesses['5']:
+        if guess not in valid_guesses[str(len(self.current_word))]:
             await ctx.reply('Invalid guess')
             return
 
         self.guesses += 1
-        response = ''
-        for idx, letter in enumerate(arg):
-            if letter == self.current_word[idx]:
-                response += '🟩'
-            elif letter in self.current_word:
-                response += '🟨'
-            else:
-                response += '⬛'
+        response = ['⬛'] * len(self.current_word)
 
-        if self.guesses == 6 and not arg == self.current_word:
+        letter_counts = {letter: self.current_word.count(letter) for letter in self.current_word}
+
+        for idx, letter in enumerate(guess):
+            if self.current_word[idx] == letter:
+                response[idx] = '🟩'
+                letter_counts[letter] -= 1
+
+        for idx, letter in enumerate(guess):
+            if self.current_word[idx] != letter and letter_counts.get(letter, 0) > 0:
+                response[idx] = '🟨'
+                letter_counts[letter] -= 1
+
+        response = ''.join(response)
+
+        if self.guesses == 6 and not guess == self.current_word:
             response += f'\nGame over, the word was {self.current_word}'
 
-        if arg == self.current_word:
+        if guess == self.current_word:
             response += '\nCongratulations!'
 
         await ctx.reply(response)
 
-        if self.guesses == 6 or arg == self.current_word:
+        if self.guesses == 6 or guess == self.current_word:
             self.current_word = None
             self.guesses = 0
 
