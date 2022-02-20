@@ -1,2 +1,7 @@
-discord:
-  token: 12345
+{
+  "global": {
+    "discord": {
+      "token": ""
+    }
+  }
+}
