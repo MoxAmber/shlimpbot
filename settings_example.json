@@ -1,5 +1,6 @@
 {
   "global": {
+    "prefix": "!",
     "discord": {
       "token": ""
     }
