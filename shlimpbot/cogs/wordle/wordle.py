@@ -8,8 +8,7 @@ import pkg_resources
 from nextcord import TextChannel, Thread
 from nextcord.ext import commands
 
-from shlimpbot.bot import config
-from shlimpbot.checks import is_config_channel
+from shlimpbot.cogs.config import is_config_channel
 
 
 @dataclass
@@ -22,22 +21,22 @@ class Wordle(commands.Cog):
     """Wordle"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: commands.Bot = bot
         self.state: Dict[int, ChannelState] = defaultdict(ChannelState)
 
     @commands.group()
-    async def wordle(self, ctx):
+    async def wordle(self, ctx: commands.Context):
         pass
 
     @wordle.command(name='cheat')
     @is_config_channel('wordle.channel')
-    async def get_word(self, ctx):
+    async def get_word(self, ctx: commands.Context):
         current_state = self.state[ctx.channel.id]
         await ctx.send(current_state.word or "No game in progress")
 
     @wordle.command(name='start')
     @is_config_channel('wordle.channel')
-    async def start(self, ctx, *, length: int = 5):
+    async def start(self, ctx: commands.Context, *, length: int = 5):
         current_state = self.state[ctx.channel.id]
         if current_state.word:
             await ctx.send('Game already running!')
@@ -54,7 +53,7 @@ class Wordle(commands.Cog):
 
     @wordle.command('guess')
     @is_config_channel('wordle.channel')
-    async def guess(self, ctx, *, guess: str):
+    async def guess(self, ctx: commands.Context, *, guess: str):
         current_state = self.state[ctx.channel.id]
         if not current_state.word:
             await ctx.send('Game not running. Use command `wordle start` to begin')
@@ -98,8 +97,9 @@ class Wordle(commands.Cog):
     @wordle.command('channel')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_messages=True)
-    async def set_channel(self, ctx, *, channel: Union[TextChannel, Thread]):
-        config.set_server(ctx.guild.id, 'wordle.channel', channel.id)
+    async def set_channel(self, ctx: commands.Context, *, channel: Union[TextChannel, Thread]):
+        config = self.bot.get_cog('Config')
+        await config.set_guild(ctx, 'wordle.channel', data=channel.id)
         await ctx.send(f'Wordle channel set to {channel.mention}')
 
 

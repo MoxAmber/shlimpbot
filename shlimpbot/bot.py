@@ -1,14 +1,15 @@
+import json
 import logging
 import os
 
 from nextcord.ext import commands
 
-from .config import Config
-
 logging.basicConfig(level=logging.INFO)
 
-config = Config(os.getenv('SHLIMPBOT_SETTINGS', './settings.json'))
-bot = commands.Bot(command_prefix=config.get_global('prefix'))
+with open(os.getenv('SHLIMPBOT_SETTINGS', './settings.json')) as config_file:
+    config = json.load(config_file)['global']
+
+bot = commands.Bot(command_prefix='!')
 
 
 @bot.listen('on_command_error')
@@ -18,9 +19,9 @@ async def on_command_error(ctx, error):
 
 
 def run():
-    for extension in config.get_global('extensions'):
+    for extension in config['extensions']:
         bot.load_extension(extension)
-    bot.run(config.get_global('discord.token'))
+    bot.run(config['discord']['token'])
 
 
 if __name__ == "__main__":
