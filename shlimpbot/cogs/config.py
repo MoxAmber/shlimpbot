@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import cast, Optional
+from typing import Optional
 
 from jsonpath_ng import parse
 from nextcord import Message
@@ -14,8 +14,8 @@ def is_config_channel(config_key: str):
         if not ctx.guild:
             # We're in a DM of some sort, so it's always allowed.
             return True
-        config = cast(Config, ctx.bot.get_cog('Config'))
-        config_channel = await config.get_guild(ctx, config_key)
+        config = ctx.bot.get_cog('Config')
+        config_channel = await config.get_guild(ctx, path=config_key)
         return ctx.channel.id == config_channel
 
     return commands.check(check_channel)
