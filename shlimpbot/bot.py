@@ -11,7 +11,7 @@ config = Config(os.getenv('SHLIMPBOT_SETTINGS', './settings.json'))
 bot = commands.Bot(command_prefix=config.get_global('prefix'))
 
 
-@bot.event
+@bot.listen('on_command_error')
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.message.add_reaction('❌')
