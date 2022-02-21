@@ -5,6 +5,7 @@ import os
 from nextcord.ext import commands
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('shlimpbot.bot')
 
 with open(os.getenv('SHLIMPBOT_SETTINGS', './settings.json')) as config_file:
     config = json.load(config_file)['global']
@@ -16,6 +17,8 @@ bot = commands.Bot(command_prefix='!')
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.message.add_reaction('❌')
+    else:
+        logger.exception(error)
 
 
 def run():
