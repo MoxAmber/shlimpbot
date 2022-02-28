@@ -1,0 +1,8 @@
+global:
+  prefix: !
+  discord:
+    token: ""
+  extensions:
+    - "shlimpbot.cogs.utilities"
+    - "shlimpbot.cogs.wordle"
+    - "shlimpbot.cogs.config"

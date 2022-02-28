@@ -1,14 +1,14 @@
-import json
 import logging
 import os
 
+import yaml
 from nextcord.ext import commands
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('shlimpbot.bot')
 
-with open(os.getenv('SHLIMPBOT_SETTINGS', './settings.json')) as config_file:
-    config = json.load(config_file)['global']
+with open(os.getenv('SHLIMPBOT_SETTINGS', './settings.yaml')) as config_file:
+    config = yaml.safe_load(config_file)['global']
 
 bot = commands.Bot(command_prefix='!')
 

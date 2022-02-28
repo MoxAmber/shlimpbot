@@ -1,8 +1,10 @@
-import json
 import logging
 import os
+import time
+from pathlib import Path
 from typing import Optional
 
+import yaml
 from jsonpath_ng import parse
 from nextcord import Message
 from nextcord.ext import commands, tasks
@@ -26,10 +28,10 @@ class Config(commands.Cog):
         self.bot = bot
         self.logger = logging.getLogger('shlimpbot.cogs.config')
         self._config = {}
-        self._filename = os.getenv('SHLIMPBOT_SETTINGS', './settings.json')
+        self.file = Path(os.getenv('SHLIMPBOT_SETTINGS', './settings.yaml'))
+        self.last_write = 0
 
-        with open(self._filename) as config_file:
-            self._config = json.load(config_file)
+        self.load_config()
 
         self.bot.command_prefix = get_prefix
         self.writer.start()
@@ -40,9 +42,18 @@ class Config(commands.Cog):
         self.writer.stop()
         self.write_config()
 
-    def write_config(self):
-        with open(self._filename, 'w') as config_file:
-            json.dump(self._config, config_file)
+    def write_config(self, force=False) -> bool:
+        modified = self.file.stat().st_mtime
+        if self.last_write == modified or force:
+            self.file.write_text(yaml.safe_dump(self._config))
+            self.last_write = int(time.time())
+            return True
+        self.last_write = modified
+        return False
+
+    def load_config(self):
+        self._config = yaml.safe_load(self.file.read_text())
+        self.last_write = self.file.stat().st_mtime
 
     @tasks.loop(minutes=5)
     async def writer(self):
@@ -56,10 +67,19 @@ class Config(commands.Cog):
     async def config(self, ctx: commands.Context):
         pass
 
+    @config.command('load')
+    @commands.is_owner()
+    async def load_config_cmd(self, ctx: commands.Context):
+        self.load_config()
+        await ctx.send('Config loaded from file')
+
     @config.command('write')
     @commands.is_owner()
-    async def write_config_cmd(self, ctx: commands.Context):
-        self.write_config()
+    async def write_config_cmd(self, ctx: commands.Context, *, force: bool = False):
+        if self.write_config(force):
+            await ctx.send('Config written to file')
+        else:
+            await ctx.send('Config modified on disk, not written')
 
     @config.group()
     async def get(self, ctx: commands.Context):
