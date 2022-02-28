@@ -23,8 +23,10 @@ def delilah_time(dt: pendulum.DateTime) -> str:
         answer += f"a short quarter past {hour}"
     elif minute in range(14, 16):
         answer += f"quarter past {hour}"
-    elif minute in range(18, 29):
+    elif minute in range(18, 23):
         answer += f"a long quarter past {hour}"
+    elif minute in range(23, 29):
+        answer += f"a short half past {hour}"
     elif minute in range(29, 32):
         answer += f"half past {hour}"
     elif minute in range(32, 38):
